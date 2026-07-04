@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Amano Check Point Area - Barcode Scanner</title>
+<!-- Load SheetJS library -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<!-- Load QuaggaJS untuk barcode scanning -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Amano Check Point Area - Barcode Scanner</h1>
+<div class="container">
+  <!-- Scanner Section -->
+  <h2>Scan Barcode</h2>
+  <div id="scanner-container"></div>
+  <p id="scanResult">Hasil Scan: <span id="barcodeData">Belum ada data</span></p>
+
+  <!-- Form Input -->
+  <form id="checkpointForm">
+    <label for="area">Nama Area:</label>
+    <input type="text" id="area" name="area" placeholder="Masukkan nama area" required />
+
+    <label for="checkpoint">Nama Check Point:</label>
+    <input type="text" id="checkpoint" name="checkpoint" placeholder="Masukkan nama check point" required />
+
+    <label for="status">Status:</label>
+    <select id="status" name="status" required>
+      <option value="">Pilih status</option>
+      <option value="OK">OK</option>
+      <option value="Perlu Perbaikan">Perlu Perbaikan</option>
+      <option value="Rusak">Rusak</option>
+    </select>
+
+    <button type="submit">Tambah Data</button>
+  </form>
+
+  <!-- Download Button -->
+  <h2>Data Check Point</h2>
+  <button id="downloadExcel">Download Data ke Excel</button>
+</div>
+
+<script>
+  const data = []; // Array untuk menyimpan data
+
+  // Inisialisasi scanner barcode menggunakan QuaggaJS
+  function startScanner() {
+    Quagga.init({
+      inputStream: {
+        name: "Live",
+        type: "LiveStream",
+        target: document.getElementById('scanner-container'),
+        constraints: {
+          facingMode: "environment" // gunakan kamera belakang jika tersedia
+        },
+      },
+      decoder: {
+        readers: ["code_128_reader", "ean_reader", "ean_8_reader"] // jenis barcode yang didukung
+      },
+    }, function(err) {
+      if (err) {
+        console.error(err);
+        alert("Gagal memulai scanner: " + err.message);
+        return;
+      }
+      Quagga.start();
+    });
+
+    // Event saat barcode terdeteksi
+    Quagga.onDetected(function(result) {
+      const code = result.codeResult.code;
+      document.getElementById('barcodeData').innerText = code;
+      // Auto isi field "Nama Check Point" berdasarkan hasil scan
+      document.getElementById('checkpoint').value = code;
+    });
+  }
+
+  // Mulai scanner saat halaman siap
+  startScanner();
+
+  // Tambahkan data saat form disubmit
+  document.getElementById('checkpointForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const area = document.getElementById('area').value;
+    const checkpoint = document.getElementById('checkpoint').value;
+    const status = document.getElementById('status').value;
+
+    if (!checkpoint) {
+      alert('Silakan scan barcode atau isi nama check point.');
+      return;
+    }
+
+    data.push({ area, checkpoint, status });
+    alert('Data berhasil disimpan!');
+    document.getElementById('checkpointForm').reset();
+    document.getElementById('barcodeData').innerText = 'Belum ada data';
+  });
+
+  // Fungsi download Excel
+  document.getElementById('downloadExcel').addEventListener('click', function() {
+    if (data.length === 0) {
+      alert('Tidak ada data untuk di-export!');
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "CheckPointData");
+    XLSX.writeFile(wb, "Amano_CheckPoint_Barcode.xlsx");
+  });
+</script>
+
+</body>
+</html>
